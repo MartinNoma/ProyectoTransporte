@@ -11,10 +11,6 @@ import reactor.core.publisher.Mono;
 @Configuration
 public class GatewayConfig {
 
-    /**
-     * Filtro global que agrega headers de trazabilidad a todas las solicitudes
-     * que pasan por el Gateway.
-     */
     @Bean
     @Order(1)
     public GlobalFilter loggingFilter() {

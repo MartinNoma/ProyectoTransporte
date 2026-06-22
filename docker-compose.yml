@@ -1,0 +1,125 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: ms-mysql
+    environment:
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./mysql-init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - ms-net
+
+  geolocalizacion:
+    build: ./Geolocalizacion_fixed
+    container_name: ms-geolocalizacion
+    environment:
+      SPRING_DATASOURCE_URL: "jdbc:mysql://mysql:3306/db_transporte?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true"
+      SPRING_DATASOURCE_USERNAME: "root"
+      SPRING_DATASOURCE_PASSWORD: ""
+    ports:
+      - "8080:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - ms-net
+
+  prediccion:
+    build: ./Prediccion_fixed
+    container_name: ms-prediccion
+    environment:
+      SPRING_DATASOURCE_URL: "jdbc:mysql://mysql:3306/db_prediccion?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true"
+      SPRING_DATASOURCE_USERNAME: "root"
+      SPRING_DATASOURCE_PASSWORD: ""
+      GEOLOCALIZACION_SERVICE_URL: "http://geolocalizacion:8080"
+    ports:
+      - "8081:8081"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      geolocalizacion:
+        condition: service_started
+    networks:
+      - ms-net
+
+  horario:
+    build: ./ProyectoHorario_fixed
+    container_name: ms-horario
+    environment:
+      SPRING_DATASOURCE_URL: "jdbc:mysql://mysql:3306/db_horario?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true"
+      SPRING_DATASOURCE_USERNAME: "root"
+      SPRING_DATASOURCE_PASSWORD: ""
+    ports:
+      - "8082:8082"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - ms-net
+
+  ruta:
+    build: ./RutaProyecto-master
+    container_name: ms-ruta
+    environment:
+      SPRING_DATASOURCE_URL: "jdbc:mysql://mysql:3306/db_ruta?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true"
+      SPRING_DATASOURCE_USERNAME: "root"
+      SPRING_DATASOURCE_PASSWORD: ""
+      HORARIO_SERVICE_URL: "http://horario:8082/api/horarios"
+    ports:
+      - "8083:8083"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      horario:
+        condition: service_started
+    networks:
+      - ms-net
+
+  monitoreo:
+    build: ./MonitoreoFinal
+    container_name: ms-monitoreo
+    environment:
+      SPRING_DATASOURCE_URL: "jdbc:mysql://mysql:3306/db_monitoreo?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true"
+      SPRING_DATASOURCE_USERNAME: "root"
+      SPRING_DATASOURCE_PASSWORD: ""
+      HORARIO_SERVICE_URL: "http://horario:8082/api/horarios/actualizar"
+    ports:
+      - "8084:8084"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      horario:
+        condition: service_started
+    networks:
+      - ms-net
+
+  gateway:
+    build: ./Gateway
+    container_name: ms-gateway
+    environment:
+      SPRING_PROFILES_ACTIVE: "docker"
+    ports:
+      - "8090:8090"
+    depends_on:
+      - geolocalizacion
+      - prediccion
+      - horario
+      - ruta
+      - monitoreo
+    networks:
+      - ms-net
+
+volumes:
+  mysql-data:
+
+networks:
+  ms-net:
+    driver: bridge
