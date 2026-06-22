@@ -1,0 +1,34 @@
+spring:
+  cloud:
+    gateway:
+      routes:
+        - id: geolocalizacion-test
+          uri: http://localhost:8080
+          predicates:
+            - Path=/geo/**
+          filters:
+            - RewritePath=/geo/(?<segment>.*), /api/ubicaciones/${segment}
+        - id: prediccion-test
+          uri: http://localhost:8081
+          predicates:
+            - Path=/pred/**
+          filters:
+            - RewritePath=/pred/(?<segment>.*), /api/predicciones/${segment}
+        - id: horario-test
+          uri: http://localhost:8082
+          predicates:
+            - Path=/horario/**
+          filters:
+            - RewritePath=/horario/(?<segment>.*), /api/horarios/${segment}
+        - id: ruta-test
+          uri: http://localhost:8083
+          predicates:
+            - Path=/ruta/**
+          filters:
+            - RewritePath=/ruta/(?<segment>.*), /api/rutas/${segment}
+        - id: monitoreo-test
+          uri: http://localhost:8084
+          predicates:
+            - Path=/monitoreo/**
+          filters:
+            - RewritePath=/monitoreo/(?<segment>.*), /api/monitoreo/${segment}

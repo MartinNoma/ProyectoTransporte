@@ -1,0 +1,166 @@
+server:
+  port: 8090
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      routes:
+        # Rutas para Microservicio 1 - Geolocalizacion (puerto 8080)
+        - id: geolocalizacion-service
+          uri: http://localhost:8080
+          predicates:
+            - Path=/geo/**
+          filters:
+            - RewritePath=/geo/(?<segment>.*), /api/ubicaciones/${segment}
+            - AddRequestHeader=X-Gateway-Source, api-gateway
+
+        # Ruta directa para compatibilidad
+        - id: geolocalizacion-direct
+          uri: http://localhost:8080
+          predicates:
+            - Path=/api/ubicaciones/**
+          filters:
+            - AddRequestHeader=X-Gateway-Source, api-gateway
+
+        # Rutas para Microservicio 2 - Prediccion (puerto 8081)
+        - id: prediccion-service
+          uri: http://localhost:8081
+          predicates:
+            - Path=/pred/**
+          filters:
+            - RewritePath=/pred/(?<segment>.*), /api/predicciones/${segment}
+            - AddRequestHeader=X-Gateway-Source, api-gateway
+
+        # Ruta directa para compatibilidad
+        - id: prediccion-direct
+          uri: http://localhost:8081
+          predicates:
+            - Path=/api/predicciones/**
+          filters:
+            - AddRequestHeader=X-Gateway-Source, api-gateway
+
+        # Rutas para Microservicio 3 - Horario (puerto 8082)
+        - id: horario-service
+          uri: http://localhost:8082
+          predicates:
+            - Path=/horario/**
+          filters:
+            - RewritePath=/horario/(?<segment>.*), /api/horarios/${segment}
+            - AddRequestHeader=X-Gateway-Source, api-gateway
+
+        # Ruta directa para compatibilidad
+        - id: horario-direct
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/horarios/**
+          filters:
+            - AddRequestHeader=X-Gateway-Source, api-gateway
+
+        # Documentacion Swagger del microservicio Horario, accesible a traves del Gateway
+        - id: horario-api-docs
+          uri: http://localhost:8082
+          predicates:
+            - Path=/horario-api-docs/**
+          filters:
+            - RewritePath=/horario-api-docs/(?<segment>.*), /${segment}
+
+        # Rutas para Microservicio 4 - Ruta (puerto 8083)
+        - id: ruta-service
+          uri: http://localhost:8083
+          predicates:
+            - Path=/ruta/**
+          filters:
+            - RewritePath=/ruta/(?<segment>.*), /api/rutas/${segment}
+            - AddRequestHeader=X-Gateway-Source, api-gateway
+
+        # Ruta directa para compatibilidad
+        - id: ruta-direct
+          uri: http://localhost:8083
+          predicates:
+            - Path=/api/rutas/**
+          filters:
+            - AddRequestHeader=X-Gateway-Source, api-gateway
+
+        # Documentacion Swagger del microservicio Ruta, accesible a traves del Gateway
+        - id: ruta-api-docs
+          uri: http://localhost:8083
+          predicates:
+            - Path=/ruta-api-docs/**
+          filters:
+            - RewritePath=/ruta-api-docs/(?<segment>.*), /${segment}
+
+        # Rutas para Microservicio 5 - Monitoreo (puerto 8084, protegido con JWT)
+        - id: monitoreo-service
+          uri: http://localhost:8084
+          predicates:
+            - Path=/monitoreo/**
+          filters:
+            - RewritePath=/monitoreo/(?<segment>.*), /api/monitoreo/${segment}
+            - AddRequestHeader=X-Gateway-Source, api-gateway
+
+        # Ruta directa para compatibilidad
+        - id: monitoreo-direct
+          uri: http://localhost:8084
+          predicates:
+            - Path=/api/monitoreo/**
+          filters:
+            - AddRequestHeader=X-Gateway-Source, api-gateway
+
+        # Login/autenticacion de Monitoreo (genera el token JWT)
+        - id: monitoreo-auth
+          uri: http://localhost:8084
+          predicates:
+            - Path=/api/auth/**
+          filters:
+            - AddRequestHeader=X-Gateway-Source, api-gateway
+
+        # Documentacion Swagger del microservicio Monitoreo, accesible a traves del Gateway
+        - id: monitoreo-api-docs
+          uri: http://localhost:8084
+          predicates:
+            - Path=/monitoreo-api-docs/**
+          filters:
+            - RewritePath=/monitoreo-api-docs/(?<segment>.*), /${segment}
+
+      # CORS global
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins: "*"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            allowedHeaders: "*"
+
+# Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway
+  endpoint:
+    health:
+      show-details: always
+
+# Swagger - agrupacion de APIs de los microservicios
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    urls:
+      - name: Geolocalizacion
+        url: /geo-api-docs
+      - name: Prediccion
+        url: /pred-api-docs
+      - name: Horario
+        url: /horario-api-docs/v3/api-docs
+      - name: Ruta
+        url: /ruta-api-docs/v3/api-docs
+      - name: Monitoreo
+        url: /monitoreo-api-docs/v3/api-docs
